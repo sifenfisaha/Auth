@@ -1,5 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
+import connectDb from "./configs/mongodb.config";
 
 dotenv.config();
 
@@ -12,4 +13,6 @@ app.get("/", (req, res) => {
   res.send({ mes: "working" });
 });
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+connectDb(() =>
+  app.listen(PORT, () => console.log(`Server running on port ${PORT}`))
+);
