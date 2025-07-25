@@ -1,7 +1,12 @@
 import type { Request, Response } from "express";
 import User from "../models/user.model";
 import { comparePassword } from "../utils/bcrypt";
-import { signAccessToken, signRefreshToken } from "../utils/jwt";
+import {
+  decodeToken,
+  signAccessToken,
+  signRefreshToken,
+  verifyRefreshToken,
+} from "../utils/jwt";
 
 export const register = async (req: Request, res: Response) => {
   const { name, email, password } = req.body;
@@ -70,4 +75,37 @@ export const login = async (req: Request, res: Response) => {
     success: true,
     message: "Logged in successfully",
   });
+};
+
+// TODO: Rotate the refresh token for better security
+
+export const refreshToken = async (req: Request, res: Response) => {
+  const token = req.cookies.refreshToken;
+  if (!token)
+    return res
+      .status(401)
+      .json({ success: false, message: "No token provided" });
+  try {
+    const payload = verifyRefreshToken(token);
+    if (!payload) {
+      return res.status(403).json({ message: "Invalid or expired token" });
+    }
+
+    const user = await User.findById(payload?.id);
+    if (!user || !user.refreshTokens.includes(token))
+      return res.status(403).json({ message: "Refresh token not recognized" });
+
+    const newAccessToken = signAccessToken({
+      id: payload?.id,
+      role: payload?.role,
+    });
+
+    res.json({
+      accessToken: newAccessToken,
+      success: true,
+      message: "Access token refreshed successfully",
+    });
+  } catch (error) {
+    return res.status(403).json({ message: "Invalid or expired token" });
+  }
 };
