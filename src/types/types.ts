@@ -1,4 +1,5 @@
 import mongoose, { Document } from "mongoose";
+import { Request } from "express";
 
 export interface Iuser extends Document {
   name: string;
@@ -12,4 +13,8 @@ export interface Iuser extends Document {
   resetPasswordToken: string;
   resetPasswordExpires: Date;
   _id: mongoose.Types.ObjectId;
+}
+
+export interface AuthenticatedRequest extends Request {
+  user?: { id: string; role: string };
 }
