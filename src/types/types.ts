@@ -1,4 +1,4 @@
-import { Document } from "mongoose";
+import mongoose, { Document } from "mongoose";
 
 export interface Iuser extends Document {
   name: string;
@@ -11,4 +11,5 @@ export interface Iuser extends Document {
   verificationTokenExpires: Date;
   resetPasswordToken: string;
   resetPasswordExpires: Date;
+  _id: mongoose.Types.ObjectId;
 }
