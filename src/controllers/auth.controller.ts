@@ -7,9 +7,16 @@ import {
   signRefreshToken,
   verifyRefreshToken,
 } from "../utils/jwt";
+import { matchedData, validationResult } from "express-validator";
 
 export const register = async (req: Request, res: Response) => {
-  const { name, email, password } = req.body;
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, errors: errors.array() });
+  }
+
+  const { name, email, password } = matchedData(req);
 
   if (!name || !email || !password) {
     return res
@@ -37,7 +44,14 @@ export const register = async (req: Request, res: Response) => {
 };
 
 export const login = async (req: Request, res: Response) => {
-  const { email, password } = req.body;
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, errors: errors.array() });
+  }
+
+  const { email, password } = matchedData(req);
+
   if (!email || !password) {
     return res
       .status(400)
@@ -76,8 +90,6 @@ export const login = async (req: Request, res: Response) => {
     message: "Logged in successfully",
   });
 };
-
-// TODO: Rotate the refresh token for better security
 
 export const refreshToken = async (req: Request, res: Response) => {
   const token = req.cookies.refreshToken;
