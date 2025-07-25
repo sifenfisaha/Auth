@@ -109,3 +109,29 @@ export const refreshToken = async (req: Request, res: Response) => {
     return res.status(403).json({ message: "Invalid or expired token" });
   }
 };
+
+export const logout = async (req: Request, res: Response) => {
+  const token = req.cookies.refreshToken;
+  if (!token)
+    return res
+      .status(401)
+      .json({ success: false, message: "No token provided" });
+
+  const payload = verifyRefreshToken(token);
+  if (!payload) {
+    return res.status(403).json({ message: "Invalid or expired token" });
+  }
+
+  const user = await User.findById(payload.id);
+  if (!user || user.refreshTokens.length === 0)
+    return res.status(403).json({ message: "Refresh token not recognized" });
+  user.refreshTokens = user?.refreshTokens.filter((tok) => tok !== token);
+  user.save();
+
+  res.clearCookie("refreshToken", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+  });
+  return res.json({ success: true, message: "Logged out successfully" });
+};
