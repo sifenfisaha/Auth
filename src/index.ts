@@ -1,9 +1,8 @@
 import express from "express";
 import dotenv from "dotenv";
+dotenv.config();
 import connectDb from "./configs/mongodb.config";
 import authRouter from "./routes/auth.routes";
-
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
