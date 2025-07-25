@@ -5,6 +5,7 @@ const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET!;
 
 interface Payload {
   id: string;
+  role: string;
 }
 
 export const signAccessToken = (payload: Payload): string => {
