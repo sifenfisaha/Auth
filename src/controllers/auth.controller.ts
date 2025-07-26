@@ -2,12 +2,13 @@ import type { Request, Response } from "express";
 import User from "../models/user.model";
 import { comparePassword } from "../utils/bcrypt";
 import {
-  decodeToken,
   signAccessToken,
   signRefreshToken,
   verifyRefreshToken,
 } from "../utils/jwt";
 import { matchedData, validationResult } from "express-validator";
+import { sendVerificationOtp } from "../utils/sendVerificationEmail";
+import jwt from "jsonwebtoken";
 
 export const register = async (req: Request, res: Response) => {
   const errors = validationResult(req);
@@ -34,6 +35,8 @@ export const register = async (req: Request, res: Response) => {
 
     const user = new User({ name, email, password });
     await user.save();
+
+    await sendVerificationOtp(user.email, user.name, user._id.toString());
 
     return res
       .status(201)
@@ -146,4 +149,21 @@ export const logout = async (req: Request, res: Response) => {
     sameSite: "strict",
   });
   return res.json({ success: true, message: "Logged out successfully" });
+};
+
+export const verifyEmail = async (req: Request, res: Response) => {
+  const token = req.query.token;
+  if (!token)
+    return res.status(400).json({ success: false, message: "Missing token" });
+  try {
+    const decoded: any = jwt.verify(token as string, process.env.JWT_SECRET!);
+    const user = await User.findById(decoded.id);
+    if (!user) return res.status(404).json("User not found");
+    user.isVerified = true;
+    await user.save();
+
+    res
+      .status(200)
+      .json({ success: true, message: "Email verified successfully" });
+  } catch (error) {}
 };
