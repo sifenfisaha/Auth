@@ -2,13 +2,14 @@
   "compilerOptions": {
     "target": "ES2020",
     "module": "CommonJS",
-    "rootDir": "src",
-    "outDir": "dist",
+    "rootDir": ".", // ✅ Set to project root
+    "outDir": "dist", // ✅ All compiled files go here
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "declaration": true // Optional: generate .d.ts files for publishing
   },
   "exclude": ["node_modules"],
-  "include": ["src"]
+  "include": ["src", "index.ts"]
 }

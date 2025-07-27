@@ -1,16 +1,30 @@
 {
-  "name": "-auth-api-boilerplate",
+  "name": "@sifen/jwt-auth-api",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "A robust, reusable JWT authentication API boilerplate with user roles, token rotation, and validation.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "keywords": [
+    "jwt",
+    "auth",
+    "typescript",
+    "express",
+    "mongoose",
+    "authentication",
+    "authorization",
+    "boilerplate"
+  ],
+  "author": "Sifen Fisaha",
+  "license": "MIT",
   "dependencies": {
     "bcryptjs": "^3.0.2",
     "cookie-parser": "^1.4.7",
