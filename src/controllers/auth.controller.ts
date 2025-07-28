@@ -1,13 +1,16 @@
 import type { Request, Response } from "express";
 import User from "../models/user.model";
-import { comparePassword } from "../utils/bcrypt";
+import { comparePassword, hashpassword } from "../utils/bcrypt";
 import {
   signAccessToken,
   signRefreshToken,
   verifyRefreshToken,
 } from "../utils/jwt";
 import { matchedData, validationResult } from "express-validator";
-import { sendVerificationOtp } from "../utils/sendVerificationEmail";
+import {
+  sendResetOtp,
+  sendVerificationOtp,
+} from "../utils/sendVerificationEmail";
 
 export const register = async (req: Request, res: Response) => {
   const errors = validationResult(req);
@@ -211,4 +214,56 @@ export const verifyEmail = async (req: Request, res: Response) => {
   } catch (error: any) {
     return res.status(400).json({ success: false, message: error.message });
   }
+};
+
+export const forgotPassword = async (req: Request, res: Response) => {
+  const { email } = req.body;
+  if (!email)
+    return res
+      .status(400)
+      .json({ success: false, message: "Email is required" });
+
+  const user = await User.findOne({ email });
+  if (!user)
+    return res.status(404).json({ success: false, message: "User not found" });
+
+  const otp = Math.floor(Math.random() * 900000 + 100000).toString();
+  user.resetPasswordToken = otp;
+  user.resetPasswordExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+  await user.save();
+
+  await sendResetOtp(user.email, user.name, otp);
+
+  return res.status(200).json({
+    success: true,
+    message: "Reset OTP sent to your email",
+  });
+};
+
+// src/controllers/auth.controller.ts
+export const resetPassword = async (req: Request, res: Response) => {
+  const { otp, newPassword } = req.body;
+
+  if (!otp || !newPassword) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Missing OTP or new password" });
+  }
+
+  const user = await User.findOne({ resetPasswordToken: otp });
+  if (!user)
+    return res.status(404).json({ success: false, message: "Invalid OTP" });
+
+  if (user.resetPasswordExpires.getTime() < Date.now())
+    return res.status(400).json({ success: false, message: "OTP expired" });
+
+  user.password = await hashpassword(newPassword);
+  user.resetPasswordToken = "";
+  user.resetPasswordExpires = new Date(0);
+  await user.save();
+
+  return res.json({
+    success: true,
+    message: "Password has been reset successfully",
+  });
 };
