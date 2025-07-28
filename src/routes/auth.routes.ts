@@ -9,8 +9,12 @@ import {
   sendVerifyOtp,
   verifyEmail,
 } from "../controllers/auth.controller";
-import { registerSchema } from "../validations/signupSchema";
-import { loginSchema } from "../validations/LoginSchema";
+import {
+  registerSchema,
+  loginSchema,
+  verifyEmailSchema,
+  verifyOtpSchema,
+} from "../validations/validationSchemas";
 
 const router = Router();
 
@@ -20,7 +24,7 @@ router.post("/refresh", refreshToken);
 router.post("/logout", logout);
 router.get("/verify-email", sendVerifyOtp);
 router.post("/verify-email", verifyEmail);
-router.post("/forgot-password", forgotPassword);
-router.post("/reset-password", resetPassword);
+router.post("/forgot-password", verifyEmailSchema, forgotPassword);
+router.post("/reset-password", verifyOtpSchema, resetPassword);
 
 export default router;

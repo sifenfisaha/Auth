@@ -217,7 +217,14 @@ export const verifyEmail = async (req: Request, res: Response) => {
 };
 
 export const forgotPassword = async (req: Request, res: Response) => {
-  const { email } = req.body;
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, errors: errors.array() });
+  }
+
+  const { email } = matchedData(req);
+
   if (!email)
     return res
       .status(400)
@@ -240,9 +247,14 @@ export const forgotPassword = async (req: Request, res: Response) => {
   });
 };
 
-// src/controllers/auth.controller.ts
 export const resetPassword = async (req: Request, res: Response) => {
-  const { otp, newPassword } = req.body;
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, errors: errors.array() });
+  }
+
+  const { otp, newPassword } = matchedData(req);
 
   if (!otp || !newPassword) {
     return res
