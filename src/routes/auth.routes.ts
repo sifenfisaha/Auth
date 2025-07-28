@@ -4,6 +4,7 @@ import {
   logout,
   refreshToken,
   register,
+  sendVerifyOtp,
   verifyEmail,
 } from "../controllers/auth.controller";
 import { registerSchema } from "../validations/signupSchema";
@@ -16,9 +17,7 @@ router.post("/register", registerSchema, register);
 router.post("/login", loginSchema, login);
 router.post("/refresh", refreshToken);
 router.post("/logout", logout);
-router.get("/verify-email", verifyEmail);
-router.get("/wkanda", (req: Request, res: Response) => {
-  return res.sendStatus(200);
-});
+router.get("/verify-email", sendVerifyOtp);
+router.post("/verify-email", verifyEmail);
 
 export default router;

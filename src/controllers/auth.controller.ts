@@ -8,7 +8,6 @@ import {
 } from "../utils/jwt";
 import { matchedData, validationResult } from "express-validator";
 import { sendVerificationOtp } from "../utils/sendVerificationEmail";
-import jwt from "jsonwebtoken";
 
 export const register = async (req: Request, res: Response) => {
   const errors = validationResult(req);
@@ -36,7 +35,7 @@ export const register = async (req: Request, res: Response) => {
     const user = new User({ name, email, password });
     await user.save();
 
-    await sendVerificationOtp(user.email, user.name, user._id.toString());
+    // await sendVerificationOtp(user.email, user.name, user._id.toString());
 
     return res
       .status(201)
@@ -151,19 +150,65 @@ export const logout = async (req: Request, res: Response) => {
   return res.json({ success: true, message: "Logged out successfully" });
 };
 
-export const verifyEmail = async (req: Request, res: Response) => {
-  const token = req.query.token;
+export const sendVerifyOtp = async (req: Request, res: Response) => {
+  const token = req.cookies.refreshToken;
   if (!token)
-    return res.status(400).json({ success: false, message: "Missing token" });
-  try {
-    const decoded: any = jwt.verify(token as string, process.env.JWT_SECRET!);
-    const user = await User.findById(decoded.id);
-    if (!user) return res.status(404).json("User not found");
-    user.isVerified = true;
-    await user.save();
+    return res
+      .status(401)
+      .json({ success: false, message: "No token provided" });
+  const payload = verifyRefreshToken(token);
+  if (!payload) {
+    return res.status(403).json({ message: "Invalid or expired token" });
+  }
 
-    res
-      .status(200)
-      .json({ success: true, message: "Email verified successfully" });
-  } catch (error) {}
+  const user = await User.findById(payload.id);
+
+  if (!user)
+    return res.status(404).json({ success: false, message: "User not found" });
+  if (user.isVerified)
+    return res
+      .status(409)
+      .json({ success: false, message: "User already verified" });
+  const otp = Math.floor(Math.random() * 900000 + 100000).toString();
+  user.verificationToken = otp;
+  user.verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  await user.save();
+  sendVerificationOtp(user.email, user.name, user.verificationToken);
+  res.status(200).json({ success: true, message: "otp sent successfully" });
+};
+
+export const verifyEmail = async (req: Request, res: Response) => {
+  const otp = req.body.otp;
+  if (!otp)
+    return res.status(400).json({ success: false, message: "Missing Details" });
+
+  const token = req.cookies.refreshToken;
+  if (!token)
+    return res
+      .status(401)
+      .json({ success: false, message: "No token provided" });
+  const payload = verifyRefreshToken(token);
+  if (!payload) {
+    return res.status(403).json({ message: "Invalid or expired token" });
+  }
+
+  const user = await User.findById(payload.id);
+
+  if (!user)
+    return res.status(404).json({ success: false, message: "User not found" });
+  try {
+    if (user.verificationToken !== otp || user.verificationToken === "")
+      return res
+        .status(400)
+        .json({ success: false, message: "Wrong otp code" });
+    if (user.verificationTokenExpires.getTime() < Date.now())
+      return res.status(400).json({ success: false, message: "OTP Expired" });
+    user.isVerified = true;
+    user.verificationToken = "";
+    user.verificationTokenExpires = new Date(0);
+    await user.save();
+    return res.json({ success: true, message: "User verified" });
+  } catch (error: any) {
+    return res.status(400).json({ success: false, message: error.message });
+  }
 };
