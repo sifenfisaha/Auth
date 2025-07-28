@@ -1,6 +1,6 @@
 {
   "name": "@sifen/jwt-auth-api",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A robust, reusable JWT authentication API boilerplate with user roles, token rotation, and validation.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
