@@ -1,225 +1,125 @@
-# Authentication API Boilerplate – Technical Documentation
+````md
+# @sifen/jwt-auth-api
 
-## Overview
+A robust and reusable JWT-based authentication API for Node.js and Express, built with TypeScript. It includes email verification via OTP, password reset, token rotation, user roles, and middleware for access control.
 
-This project is a modular and secure authentication boilerplate built with Node.js, Express, TypeScript, and MongoDB. It implements modern JWT-based authentication with features including:
+## Features
 
-- User registration and login
-- Access and refresh token management
-- Role-based authorization
-- Secure logout
-- Email verification
-- Input validation
-- Security hardening
+- JWT Access & Refresh Token authentication
+- Email verification using OTP
+- Forgot and Reset Password using OTP
+- Login, Register, Logout
+- Token refresh endpoint
+- Role-based access control (user, admin)
+- Secure cookie-based refresh token storage
+- Input validation using `express-validator`
+- Cleanly written in TypeScript
+- Easily pluggable into any Express app
 
-This boilerplate is designed for reuse across multiple full-stack projects.
+## Installation
 
----
-
-## Technologies Used
-
-- **Node.js** with **Express**
-- **TypeScript**
-- **MongoDB** with **Mongoose**
-- **JWT** for authentication
-- **Nodemailer** for email delivery
-- **express-validator** for input validation
-- **Helmet, CORS, XSS-Clean, Mongo-Sanitize** for security
-
----
-
-## Folder Structure
-
+```bash
+npm install @sifen/jwt-auth-api
 ```
-src/
-│
-├── controllers/          # Auth and user logic
-├── models/               # Mongoose models
-├── routes/               # Express route definitions
-├── middlewares/          # Auth and error middlewares
-├── utils/                # Helper functions (JWT, email)
-├── configs/              # Configs (DB, nodemailer)
-├── validators/           # express-validator middleware
-└── index.ts              # Main app entry
-```
+````
 
----
+## Environment Configuration
 
-## .env File
-
-Ensure the following environment variables are present in a `.env` file at the root:
+Create a `.env` file in your host app with the following variables:
 
 ```env
 PORT=5000
-MONGODB_URL=mongodb://localhost:27017/yourdb
-JWT_ACCESS_SECRET=your_access_secret
-JWT_REFRESH_SECRET=your_refresh_secret
-EMAIL_USER=your_email@gmail.com
-EMAIL_PASS=your_app_password
+MONGODB_URL=your_mongodb_connection_string
+JWT_SECRET=your_access_token_secret
+REFRESH_SECRET=your_refresh_token_secret
+EMAIL_USER=your_email_address@gmail.com
+EMAIL_PASS=your_email_app_password
 NODE_ENV=development
 ```
 
----
+## Basic Usage
 
-## Features & Endpoints
+In your Express application:
 
-### 1. **User Registration**
+```ts
+// index.ts or app.ts in your project
+import express from "express";
+import dotenv from "dotenv";
+import { auth } from "@sifen/jwt-auth-api";
+import { connectDb } from "./configs/mongodb.config"; // Your database connection
 
-- **POST /api/auth/register**
-- Validates input
-- Hashes password
-- Saves user
-- Sends email verification
+dotenv.config();
 
-### 2. **Email Verification**
+const app = express();
+const PORT = process.env.PORT || 5000;
 
-- **GET /api/auth/verify-email?token=**
-- Verifies token
-- Marks user as verified
+app.use(express.json());
 
-### 3. **User Login**
+// Mounts all auth routes under /api/auth
+app.use(auth());
 
-- **POST /api/auth/login**
-- Verifies credentials
-- Issues access and refresh tokens
-- Sets refresh token as HTTP-only cookie
+connectDb(() =>
+  app.listen(PORT, () => console.log(`Server running on port ${PORT}`))
+);
+```
 
-### 4. **Token Refresh**
+## Auth Endpoints
 
-- **POST /api/auth/refresh**
-- Validates refresh token from cookie
-- Verifies it matches a stored token
-- Issues a new access token
+| Endpoint                    | Method | Description                        |
+| --------------------------- | ------ | ---------------------------------- |
+| `/api/auth/register`        | POST   | Register a new user                |
+| `/api/auth/login`           | POST   | Log in and receive tokens          |
+| `/api/auth/refresh`         | POST   | Refresh the access token           |
+| `/api/auth/logout`          | POST   | Logout and clear the refresh token |
+| `/api/auth/verify-email`    | GET    | Send verification OTP to email     |
+| `/api/auth/verify-email`    | POST   | Submit OTP to verify email         |
+| `/api/auth/forgot-password` | POST   | Send OTP to email for reset        |
+| `/api/auth/reset-password`  | POST   | Reset password using OTP           |
 
-### 5. **Secure Logout**
+## Middleware for Protected Routes
 
-- **POST /api/auth/logout**
-- Deletes the refresh token from user model
-- Clears the refresh token cookie
+You can import and use the built-in middleware:
 
-### 6. **Get User Profile**
+```ts
+import { isAuthenticated, isAuthorized } from "@sifen/jwt-auth-api";
 
-- **GET /api/user/profile**
-- Requires `isAuthenticated` middleware
-- Returns current user's info
+app.get("/dashboard", isAuthenticated, (req, res) => {
+  res.send("Welcome, authenticated user.");
+});
 
-### 7. **Update User Profile**
+app.get("/admin", isAuthenticated, isAuthorized("admin"), (req, res) => {
+  res.send("Welcome, admin user.");
+});
+```
 
-- **PUT /api/user/profile**
-- Requires `isAuthenticated` middleware
-- Allows updating name/email
+## Response Format
 
-### 8. **Role-Based Access Control**
+All responses follow a structured format:
 
-- Middleware: `isAuthorized(...roles)`
-- Used on protected routes:
+**Success:**
 
-  ```ts
-  router.get("/admin", isAuthenticated, isAuthorized("admin"), handler);
-  ```
+```json
+{
+  "success": true,
+  "message": "Action successful",
+  "data": {}
+}
+```
 
-### 9. **Input Validation**
+**Error:**
 
-- Implemented with `express-validator` per route
-- Example:
+```json
+{
+  "success": false,
+  "message": "Error occurred",
+  "errors": []
+}
+```
 
-  ```ts
-  (body("email").isEmail(), body("password").isLength({ min: 6 }));
-  ```
+## Input Validation
 
----
+All requests are validated using `express-validator`. This ensures required fields, valid email formats, password length, etc., are enforced on every route.
 
-## Authentication Tokens
+## Contribution
 
-### Access Token
-
-- Lifetime: 15 minutes
-- Stored in memory or local storage on client
-- Sent in `Authorization: Bearer <token>` header
-
-### Refresh Token
-
-- Lifetime: 7 days
-- Stored in user document (`refreshTokens: string[]`)
-- Sent as `HttpOnly` cookie
-
----
-
-## Security Measures
-
-- **Helmet** for secure headers
-- **CORS** configured for cross-origin safety
-- **xss-clean** to sanitize input against XSS
-- **express-mongo-sanitize** to prevent NoSQL injection
-- **Cookie HttpOnly + SameSite** for refresh token protection
-
----
-
-## Middleware
-
-### `isAuthenticated`
-
-- Verifies access token
-- Injects `req.user = { id, role }`
-
-### `isAuthorized(...roles)`
-
-- Checks `req.user.role` against allowed roles
-- Returns 403 if not matched
-
-### `validateRequest`
-
-- Applies express-validator checks
-- Returns 422 on error
-
----
-
-## Email Verification Setup
-
-- Token: JWT with 1-day expiry
-- Link format: `/api/auth/verify-email?token=...`
-- Sent via Gmail SMTP (Nodemailer)
-- Verifies user and updates `isVerified = true`
-
----
-
-## Extending the Boilerplate
-
-You can add:
-
-- Forgot password + reset token
-- Email template engine (like MJML, EJS)
-- OAuth2 (Google, GitHub)
-- Rate limiting (e.g., `express-rate-limit`)
-- Refresh token rotation
-- Email resend on login if unverified
-
----
-
-## Example Commit Messages
-
-- `feat: implement JWT-based user login`
-- `feat: add email verification with token`
-- `feat: add input validation with express-validator`
-- `fix: update logout to remove used refresh token`
-- `chore: setup helmet and xss-clean for security`
-
----
-
-## Running the App
-
-1. Install dependencies:
-
-   ```bash
-   npm install
-   ```
-
-2. Create `.env` file in root.
-
-3. Run development server:
-
-   ```bash
-   npm run dev
-   ```
-
----
+Contributions are welcome. If you wish to improve this package, feel free to fork the repository and open a pull request.
