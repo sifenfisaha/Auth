@@ -11,34 +11,21 @@ import {
   sendResetOtp,
   sendVerificationOtp,
 } from "../utils/sendVerificationEmail";
+import {
+  hadnleVerifyEmail,
+  handleForgotPassword,
+  handleRefreshToken,
+  handleResetPassword,
+  handleSendVerifyOtp,
+  loginUser,
+  logoutUser,
+  registerUser,
+} from "../services/auth.services";
 
 export const register = async (req: Request, res: Response) => {
-  const errors = validationResult(req);
-
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ success: false, errors: errors.array() });
-  }
-
-  const { name, email, password } = matchedData(req);
-
-  if (!name || !email || !password) {
-    return res
-      .status(400)
-      .json({ success: false, message: "All fields are required" });
-  }
-
+  const { email, password, name } = req.data!;
   try {
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res
-        .status(409)
-        .json({ success: false, message: "User already exists" });
-    }
-
-    const user = new User({ name, email, password });
-    await user.save();
-
-    // await sendVerificationOtp(user.email, user.name, user._id.toString());
+    await registerUser(name, email, password);
 
     return res
       .status(201)
@@ -49,51 +36,30 @@ export const register = async (req: Request, res: Response) => {
 };
 
 export const login = async (req: Request, res: Response) => {
-  const errors = validationResult(req);
+  const { email, password } = req.data!;
 
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ success: false, errors: errors.array() });
+  try {
+    const { user, refreshToken, accessToken } = await loginUser(
+      email,
+      password
+    );
+    user.refreshTokens.push(refreshToken);
+    await user.save();
+
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+    return res.json({
+      accessToken,
+      success: true,
+      message: "Logged in successfully",
+    });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
   }
-
-  const { email, password } = matchedData(req);
-
-  if (!email || !password) {
-    return res
-      .status(400)
-      .json({ success: false, message: "All fields are required" });
-  }
-
-  const user = await User.findOne({ email });
-  if (!user)
-    return res.status(404).json({ success: false, message: "User not found" });
-
-  const isMatch = await comparePassword(password, user.password);
-  if (!isMatch) return res.status(401).json({ message: "Invalid credentials" });
-
-  const accessToken = signAccessToken({
-    id: user._id.toString(),
-    role: user.role,
-  });
-
-  const refreshToken = signRefreshToken({
-    id: user._id.toString(),
-    role: user.role,
-  });
-
-  user.refreshTokens.push(refreshToken);
-  await user.save();
-
-  res.cookie("refreshToken", refreshToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  });
-  return res.json({
-    accessToken,
-    success: true,
-    message: "Logged in successfully",
-  });
 };
 
 export const refreshToken = async (req: Request, res: Response) => {
@@ -103,27 +69,17 @@ export const refreshToken = async (req: Request, res: Response) => {
       .status(401)
       .json({ success: false, message: "No token provided" });
   try {
-    const payload = verifyRefreshToken(token);
-    if (!payload) {
-      return res.status(403).json({ message: "Invalid or expired token" });
-    }
-
-    const user = await User.findById(payload?.id);
-    if (!user || !user.refreshTokens.includes(token))
-      return res.status(403).json({ message: "Refresh token not recognized" });
-
-    const newAccessToken = signAccessToken({
-      id: payload?.id,
-      role: payload?.role,
-    });
+    const { newAccessToken } = await handleRefreshToken(token);
 
     res.json({
       accessToken: newAccessToken,
       success: true,
       message: "Access token refreshed successfully",
     });
-  } catch (error) {
-    return res.status(403).json({ message: "Invalid or expired token" });
+  } catch (error: any) {
+    res
+      .status(403)
+      .json({ success: false, message: error.message || "Invalid token" });
   }
 };
 
@@ -134,16 +90,7 @@ export const logout = async (req: Request, res: Response) => {
       .status(401)
       .json({ success: false, message: "No token provided" });
 
-  const payload = verifyRefreshToken(token);
-  if (!payload) {
-    return res.status(403).json({ message: "Invalid or expired token" });
-  }
-
-  const user = await User.findById(payload.id);
-  if (!user || user.refreshTokens.length === 0)
-    return res.status(403).json({ message: "Refresh token not recognized" });
-  user.refreshTokens = user?.refreshTokens.filter((tok) => tok !== token);
-  user.save();
+  await logoutUser(token);
 
   res.clearCookie("refreshToken", {
     httpOnly: true,
@@ -159,123 +106,53 @@ export const sendVerifyOtp = async (req: Request, res: Response) => {
     return res
       .status(401)
       .json({ success: false, message: "No token provided" });
-  const payload = verifyRefreshToken(token);
-  if (!payload) {
-    return res.status(403).json({ message: "Invalid or expired token" });
+  try {
+    await handleSendVerifyOtp(token);
+    res.status(200).json({ success: true, message: "OTP sent successfully" });
+  } catch (error: any) {
+    res.status(400).json({ success: false, message: error.message });
   }
-
-  const user = await User.findById(payload.id);
-
-  if (!user)
-    return res.status(404).json({ success: false, message: "User not found" });
-  if (user.isVerified)
-    return res
-      .status(409)
-      .json({ success: false, message: "User already verified" });
-  const otp = Math.floor(Math.random() * 900000 + 100000).toString();
-  user.verificationToken = otp;
-  user.verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
-  await user.save();
-  sendVerificationOtp(user.email, user.name, user.verificationToken);
-  res.status(200).json({ success: true, message: "otp sent successfully" });
 };
 
 export const verifyEmail = async (req: Request, res: Response) => {
-  const otp = req.body.otp;
-  if (!otp)
-    return res.status(400).json({ success: false, message: "Missing Details" });
-
+  const { otp } = req.data!;
   const token = req.cookies.refreshToken;
   if (!token)
     return res
       .status(401)
       .json({ success: false, message: "No token provided" });
-  const payload = verifyRefreshToken(token);
-  if (!payload) {
-    return res.status(403).json({ message: "Invalid or expired token" });
-  }
-
-  const user = await User.findById(payload.id);
-
-  if (!user)
-    return res.status(404).json({ success: false, message: "User not found" });
   try {
-    if (user.verificationToken !== otp || user.verificationToken === "")
-      return res
-        .status(400)
-        .json({ success: false, message: "Wrong otp code" });
-    if (user.verificationTokenExpires.getTime() < Date.now())
-      return res.status(400).json({ success: false, message: "OTP Expired" });
-    user.isVerified = true;
-    user.verificationToken = "";
-    user.verificationTokenExpires = new Date(0);
-    await user.save();
-    return res.json({ success: true, message: "User verified" });
+    await hadnleVerifyEmail(otp, token);
+    res.json({ success: true, message: "User verified" });
   } catch (error: any) {
-    return res.status(400).json({ success: false, message: error.message });
+    res.status(400).json({ success: false, message: error.message });
   }
 };
 
 export const forgotPassword = async (req: Request, res: Response) => {
-  const errors = validationResult(req);
+  const { email } = req.data!;
 
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ success: false, errors: errors.array() });
+  try {
+    await handleForgotPassword(email);
+    res.status(200).json({
+      success: true,
+      message: "Reset OTP sent to your email",
+    });
+  } catch (error: any) {
+    res.status(400).json({ success: false, message: error.message });
   }
-
-  const { email } = matchedData(req);
-
-  if (!email)
-    return res
-      .status(400)
-      .json({ success: false, message: "Email is required" });
-
-  const user = await User.findOne({ email });
-  if (!user)
-    return res.status(404).json({ success: false, message: "User not found" });
-
-  const otp = Math.floor(Math.random() * 900000 + 100000).toString();
-  user.resetPasswordToken = otp;
-  user.resetPasswordExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-  await user.save();
-
-  await sendResetOtp(user.email, user.name, otp);
-
-  return res.status(200).json({
-    success: true,
-    message: "Reset OTP sent to your email",
-  });
 };
 
 export const resetPassword = async (req: Request, res: Response) => {
-  const errors = validationResult(req);
+  const { otp, newPassword } = req.data!;
 
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ success: false, errors: errors.array() });
+  try {
+    await handleResetPassword(newPassword, otp);
+    res.json({
+      success: true,
+      message: "Password has been reset successfully",
+    });
+  } catch (error: any) {
+    res.status(400).json({ success: false, message: error.message });
   }
-
-  const { otp, newPassword } = matchedData(req);
-
-  if (!otp || !newPassword) {
-    return res
-      .status(400)
-      .json({ success: false, message: "Missing OTP or new password" });
-  }
-
-  const user = await User.findOne({ resetPasswordToken: otp });
-  if (!user)
-    return res.status(404).json({ success: false, message: "Invalid OTP" });
-
-  if (user.resetPasswordExpires.getTime() < Date.now())
-    return res.status(400).json({ success: false, message: "OTP expired" });
-
-  user.password = await hashpassword(newPassword);
-  user.resetPasswordToken = "";
-  user.resetPasswordExpires = new Date(0);
-  await user.save();
-
-  return res.json({
-    success: true,
-    message: "Password has been reset successfully",
-  });
 };

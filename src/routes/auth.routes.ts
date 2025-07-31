@@ -14,17 +14,24 @@ import {
   loginSchema,
   verifyEmailSchema,
   verifyOtpSchema,
-} from "../validations/validationSchemas";
+  otpSchema,
+} from "../validators/validationSchemas";
+import { validateRequest } from "../validators/validateRequest";
 
 const router = Router();
 
-router.post("/register", registerSchema, register);
-router.post("/login", loginSchema, login);
+router.post("/register", registerSchema, validateRequest, register);
+router.post("/login", loginSchema, validateRequest, login);
 router.post("/refresh", refreshToken);
 router.post("/logout", logout);
 router.get("/verify-email", sendVerifyOtp);
-router.post("/verify-email", verifyEmail);
-router.post("/forgot-password", verifyEmailSchema, forgotPassword);
-router.post("/reset-password", verifyOtpSchema, resetPassword);
+router.post("/verify-email", otpSchema, validateRequest, verifyEmail);
+router.post(
+  "/forgot-password",
+  verifyEmailSchema,
+  validateRequest,
+  forgotPassword
+);
+router.post("/reset-password", verifyOtpSchema, validateRequest, resetPassword);
 
 export default router;

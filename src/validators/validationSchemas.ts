@@ -38,18 +38,21 @@ export const registerSchema = checkSchema({
       options: { min: 6 },
       errorMessage: "Password must be at least 6 characters",
     },
+    notEmpty: {
+      errorMessage: "Password is required",
+    },
   },
 });
 
 export const verifyOtpSchema = checkSchema({
-  email: {
+  newPassword: {
     notEmpty: {
-      errorMessage: "Email is required",
+      errorMessage: "New password is required",
     },
-    isEmail: {
-      errorMessage: "Please provide a valid email",
+    isLength: {
+      options: { min: 6 },
+      errorMessage: "Password must be at least 6 characters",
     },
-    normalizeEmail: true,
   },
   otp: {
     notEmpty: {
@@ -75,5 +78,21 @@ export const verifyEmailSchema = checkSchema({
       errorMessage: "Please provide a valid email",
     },
     normalizeEmail: true,
+  },
+});
+
+export const otpSchema = checkSchema({
+  otp: {
+    notEmpty: {
+      errorMessage: "OTP is required",
+    },
+    isLength: {
+      options: { min: 6, max: 6 },
+      errorMessage: "OTP must be 6 digits",
+    },
+    isNumeric: {
+      errorMessage: "OTP must contain only numbers",
+    },
+    trim: true,
   },
 });
