@@ -61,4 +61,21 @@ export class TokenService {
     user.refreshTokens = user.refreshTokens.filter((t) => t !== jti);
     await user.save();
   }
+
+  static async rotateRefreshToken(
+    oldJti: string,
+    userId: string
+  ): Promise<string> {
+    const jti = uuid();
+    const user = await User.findById(userId);
+    if (!user) throw new Error("User not found");
+
+    user.refreshTokens = user.refreshTokens.filter((t) => t !== oldJti);
+
+    await user.save();
+
+    return jwt.sign({ userId, jti }, process.env.REFRESH_SECRET!, {
+      expiresIn: "7d",
+    });
+  }
 }
