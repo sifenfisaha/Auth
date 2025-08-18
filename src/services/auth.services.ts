@@ -1,135 +1,170 @@
-import {
-  signAccessToken,
-  signRefreshToken,
-  verifyAccessToken,
-  verifyRefreshToken,
-} from "../auth";
 import User from "../models/user.model";
+import { TokenService } from "./token.service";
 import { comparePassword, hashpassword } from "../utils/bcrypt";
 import {
-  sendResetOtp,
   sendVerificationOtp,
+  sendResetOtp,
 } from "../utils/sendVerificationEmail";
 
-export const registerUser = async (
-  name: string,
-  email: string,
-  password: string
-) => {
-  const existingUser = await User.findOne({ email });
-  if (existingUser) throw new Error("User already exists");
+interface RegisterInput {
+  name: string;
+  email: string;
+  password: string;
+}
 
-  const user = new User({ email, name, password });
-  await user.save();
-};
+interface LoginInput {
+  email: string;
+  password: string;
+}
 
-export const loginUser = async (email: string, password: string) => {
-  const user = await User.findOne({ email });
-  if (!user) throw new Error("User not found");
+interface RefreshInput {
+  refreshToken: string;
+}
 
-  const isPasswordValid = await comparePassword(password, user.password);
-  if (!isPasswordValid) throw new Error("Invlaid credentials");
+interface ResetPasswordInput {
+  otp: string;
+  newPassword: string;
+}
 
-  const accessToken = signAccessToken({
-    id: user._id.toString(),
-    role: user.role,
-  });
+export class AuthService {
+  static async register({ name, email, password }: RegisterInput) {
+    const existingUser = await User.findOne({ email });
+    if (existingUser) throw new Error("User already exists");
 
-  const refreshToken = signRefreshToken({
-    id: user._id.toString(),
-    role: user.role,
-  });
+    const hashedPassword = await hashpassword(password);
+    const user = new User({ name, email, password: hashedPassword });
+    await user.save();
 
-  return { accessToken, refreshToken, user };
-};
+    const accessToken = TokenService.generateAccessToken({
+      userId: user._id.toString(),
+    });
+    const refreshToken = await TokenService.generateRefreshToken(
+      user._id.toString()
+    );
 
-export const handleRefreshToken = async (token: string) => {
-  const payload = verifyRefreshToken(token);
-  if (!payload) throw new Error("Invalid or expired token");
+    return { user, accessToken, refreshToken };
+  }
 
-  const user = await User.findById(payload.id);
-  if (!user || !user.refreshTokens.includes(token))
-    throw new Error("Refresh token not recognized");
+  static async login({ email, password }: LoginInput) {
+    const user = await User.findOne({ email });
+    if (!user) throw new Error("User not found");
 
-  const newAccessToken = signAccessToken({
-    id: payload?.id,
-    role: payload?.role,
-  });
+    const isValid = await comparePassword(password, user.password);
+    if (!isValid) throw new Error("Invalid credentials");
 
-  return { newAccessToken };
-};
+    const accessToken = TokenService.generateAccessToken({
+      userId: user._id.toString(),
+    });
+    const refreshToken = await TokenService.generateRefreshToken(
+      user._id.toString()
+    );
 
-export const logoutUser = async (token: string) => {
-  const payload = verifyRefreshToken(token);
-  if (!payload) throw new Error("Invalid or expired token");
+    return { user, accessToken, refreshToken };
+  }
 
-  const user = await User.findById(payload.id);
-  if (!user || user.refreshTokens.length === 0)
-    throw new Error("Refresh token not recognized");
+  static async refresh({ refreshToken }: RefreshInput) {
+    const payload = TokenService.verifyToken<{ userId: string; jti: string }>(
+      refreshToken,
+      process.env.REFRESH_SECRET!
+    );
+    if (!payload || !payload.jti || !payload.userId)
+      throw new Error("Invalid or expired refresh token");
 
-  user.refreshTokens = user.refreshTokens.filter((t) => t !== token);
-  await user.save();
+    const valid = await TokenService.isRefreshTokenValid(
+      payload.jti,
+      payload.userId
+    );
+    if (!valid) throw new Error("Refresh token not recognized");
 
-  return true;
-};
+    const newRefreshToken = await TokenService.rotateRefreshToken(
+      payload.jti,
+      payload.userId
+    );
 
-export const handleSendVerifyOtp = async (token: string) => {
-  const payload = verifyRefreshToken(token);
-  if (!payload) throw new Error("Invalid or expired token");
+    const accessToken = TokenService.generateAccessToken({
+      userId: payload.userId,
+    });
 
-  const user = await User.findById(payload.id);
-  if (!user) throw new Error("User not found");
-  if (user.isVerified) throw new Error("User already verified");
+    return { accessToken, refreshToken: newRefreshToken };
+  }
 
-  const otp = Math.floor(Math.random() * 900000 + 100000).toString();
-  user.verificationToken = otp;
-  user.verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
-  await user.save();
-  sendVerificationOtp(user.email, user.name, user.verificationToken);
+  static async logout(refreshToken: string) {
+    const payload = TokenService.verifyToken<{ userId: string; jti: string }>(
+      refreshToken,
+      process.env.REFRESH_SECRET!
+    );
+    if (!payload || !payload.jti || !payload.userId)
+      throw new Error("Invalid or expired refresh token");
 
-  return true;
-};
+    await TokenService.invalidateRefreshToken(payload.jti, payload.userId);
+    return true;
+  }
 
-export const hadnleVerifyEmail = async (otp: string, token: string) => {
-  const payload = verifyRefreshToken(token);
-  if (!payload) throw new Error("Invalid or expired token");
+  static async sendVerificationOtp(userId: string) {
+    const user = await User.findById(userId);
+    if (!user) throw new Error("User not found");
+    if (user.isVerified) throw new Error("User already verified");
 
-  const user = await User.findById(payload.id);
-  if (!user) throw new Error("User not found");
-  if (user.isVerified) throw new Error("User already verified");
+    const now = Date.now();
 
-  if (user.verificationToken !== otp || user.verificationToken === "")
-    throw new Error("Wrong otp code");
-  if (user.verificationTokenExpires.getTime() < Date.now())
-    throw new Error("OTP Expired");
+    if (!user.verificationTokenExpires)
+      user.verificationTokenExpires = new Date(0);
 
-  user.isVerified = true;
-  user.verificationToken = "";
-  user.verificationTokenExpires = new Date(0);
-  await user.save();
-};
+    if (now - user.verificationTokenExpires.getTime() < 60 * 1000) {
+      throw new Error("Wait before requesting another OTP");
+    }
 
-export const handleForgotPassword = async (email: string) => {
-  const user = await User.findOne({ email });
-  if (!user) throw new Error("User not found");
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    user.verificationToken = otp;
+    user.verificationTokenExpires = new Date(now + 24 * 60 * 60 * 1000);
+    await user.save();
 
-  const otp = Math.floor(Math.random() * 900000 + 100000).toString();
-  user.resetPasswordToken = otp;
-  user.resetPasswordExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-  await user.save();
+    await sendVerificationOtp(user.email, user.name, otp);
+    return true;
+  }
 
-  await sendResetOtp(user.email, user.name, otp);
-};
+  static async verifyEmail(userId: string, otp: string) {
+    const user = await User.findById(userId);
+    if (!user) throw new Error("User not found");
+    if (user.isVerified) throw new Error("User already verified");
 
-export const handleResetPassword = async (newPassword: string, otp: string) => {
-  const user = await User.findOne({ resetPasswordToken: otp });
-  if (!user) throw new Error("Invalid OTP");
+    if (user.verificationToken !== otp) throw new Error("Invalid OTP");
+    if (user.verificationTokenExpires.getTime() < Date.now())
+      throw new Error("OTP expired");
 
-  if (user.resetPasswordExpires.getTime() < Date.now())
-    throw new Error("OTP expired");
+    user.isVerified = true;
+    user.verificationToken = "";
+    user.verificationTokenExpires = new Date(0);
+    await user.save();
 
-  user.password = newPassword;
-  user.resetPasswordToken = "";
-  user.resetPasswordExpires = new Date(0);
-  await user.save();
-};
+    return true;
+  }
+
+  static async forgotPassword(email: string) {
+    const user = await User.findOne({ email });
+    if (!user) throw new Error("User not found");
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    user.resetPasswordToken = otp;
+    user.resetPasswordExpires = new Date(Date.now() + 10 * 60 * 1000);
+    await user.save();
+
+    await sendResetOtp(user.email, user.name, otp);
+    return true;
+  }
+
+  static async resetPassword({ otp, newPassword }: ResetPasswordInput) {
+    const user = await User.findOne({ resetPasswordToken: otp });
+    if (!user) throw new Error("Invalid OTP");
+    if (user.resetPasswordExpires.getTime() < Date.now())
+      throw new Error("OTP expired");
+
+    user.password = await hashpassword(newPassword);
+    user.resetPasswordToken = "";
+    user.resetPasswordExpires = new Date(0);
+    user.refreshTokens = [];
+    await user.save();
+
+    return true;
+  }
+}
