@@ -1,26 +1,25 @@
 import { Router } from "express";
 import {
-  forgotPassword,
-  login,
-  logout,
-  refreshToken,
   register,
-  resetPassword,
+  login,
+  refreshToken,
+  logout,
   sendVerifyOtp,
   verifyEmail,
+  forgotPassword,
+  resetPassword,
 } from "../controllers/auth.controller";
 import {
   registerSchema,
   loginSchema,
   verifyEmailSchema,
-  verifyOtpSchema,
   otpSchema,
 } from "../validators/validationSchemas";
 import { validateRequest } from "../validators/validateRequest";
 
 const router = Router();
 
-router.post("/register", registerSchema, validateRequest, register);
+router.post("/singup", registerSchema, validateRequest, register);
 router.post("/login", loginSchema, validateRequest, login);
 router.post("/refresh", refreshToken);
 router.post("/logout", logout);
@@ -32,6 +31,6 @@ router.post(
   validateRequest,
   forgotPassword
 );
-router.post("/reset-password", verifyOtpSchema, validateRequest, resetPassword);
+router.post("/reset-password", otpSchema, validateRequest, resetPassword);
 
 export default router;
