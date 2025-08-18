@@ -18,7 +18,7 @@ interface LoginInput {
 }
 
 interface RefreshInput {
-  refreshToken: string;
+  token: string;
 }
 
 interface ResetPasswordInput {
@@ -42,7 +42,13 @@ export class AuthService {
       user._id.toString()
     );
 
-    return { user, accessToken, refreshToken };
+    const safeUser = {
+      name: user.name,
+      email: user.email,
+      isAdmin: user.role === "admin",
+    };
+
+    return { user: safeUser, accessToken, refreshToken };
   }
 
   static async login({ email, password }: LoginInput) {
@@ -59,41 +65,48 @@ export class AuthService {
       user._id.toString()
     );
 
-    return { user, accessToken, refreshToken };
+    const safeUser = {
+      name: user.name,
+      email: user.email,
+      isAdmin: user.role === "admin",
+    };
+
+    return { user: safeUser, accessToken, refreshToken };
   }
 
-  static async refresh({ refreshToken }: RefreshInput) {
+  static async refresh({ token }: RefreshInput) {
     const payload = TokenService.verifyToken<{ userId: string; jti: string }>(
-      refreshToken,
+      token,
       process.env.REFRESH_SECRET!
     );
-    if (!payload || !payload.jti || !payload.userId)
+
+    if (!payload?.userId || !payload.jti)
       throw new Error("Invalid or expired refresh token");
 
-    const valid = await TokenService.isRefreshTokenValid(
+    const isValid = await TokenService.isRefreshTokenValid(
       payload.jti,
       payload.userId
     );
-    if (!valid) throw new Error("Refresh token not recognized");
+    if (!isValid) throw new Error("Refresh token not recognized");
 
     const newRefreshToken = await TokenService.rotateRefreshToken(
       payload.jti,
       payload.userId
     );
-
-    const accessToken = TokenService.generateAccessToken({
+    const newAccessToken = TokenService.generateAccessToken({
       userId: payload.userId,
     });
 
-    return { accessToken, refreshToken: newRefreshToken };
+    return { accessToken: newAccessToken, refreshToken: newRefreshToken };
   }
 
-  static async logout(refreshToken: string) {
+  static async logout(token: string) {
     const payload = TokenService.verifyToken<{ userId: string; jti: string }>(
-      refreshToken,
+      token,
       process.env.REFRESH_SECRET!
     );
-    if (!payload || !payload.jti || !payload.userId)
+
+    if (!payload?.userId || !payload.jti)
       throw new Error("Invalid or expired refresh token");
 
     await TokenService.invalidateRefreshToken(payload.jti, payload.userId);
@@ -107,10 +120,11 @@ export class AuthService {
 
     const now = Date.now();
 
-    if (!user.verificationTokenExpires)
-      user.verificationTokenExpires = new Date(0);
-
-    if (now - user.verificationTokenExpires.getTime() < 60 * 1000) {
+    // Prevent requesting OTP too frequently
+    if (
+      user.verificationTokenExpires &&
+      now < user.verificationTokenExpires.getTime()
+    ) {
       throw new Error("Wait before requesting another OTP");
     }
 
@@ -166,5 +180,15 @@ export class AuthService {
     await user.save();
 
     return true;
+  }
+
+  static getUserFromToken(token: string) {
+    const payload = TokenService.verifyToken<{ userId: string; jti: string }>(
+      token,
+      process.env.REFRESH_SECRET!
+    );
+    if (!payload || !payload.userId)
+      throw new Error("Invalid or expired token");
+    return payload;
   }
 }
