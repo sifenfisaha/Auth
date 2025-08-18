@@ -4,7 +4,7 @@ import User from "../models/user.model";
 
 interface TokenPayload {
   userId: string;
-  jti: string;
+  jti?: string;
 }
 
 export class TokenService {
@@ -71,6 +71,8 @@ export class TokenService {
     if (!user) throw new Error("User not found");
 
     user.refreshTokens = user.refreshTokens.filter((t) => t !== oldJti);
+
+    user.refreshTokens.push(jti);
 
     await user.save();
 
