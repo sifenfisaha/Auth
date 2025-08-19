@@ -38,12 +38,6 @@ export interface RefreshTokenConfig {
   reuseDetection?: boolean;
 }
 
-export interface AuditConfig {
-  enabled: boolean;
-  provider?: "console" | "file" | "database" | "custom";
-  onLog?: (event: { type: string; userId?: string; meta?: any }) => void;
-}
-
 export interface SessionConfig {
   strategy?: "jwt" | "cookie";
   cookieName?: string;
@@ -63,7 +57,6 @@ export interface AuthConfig<UserType = any> {
   passwordPolicy?: PasswordPolicy;
 
   rateLimit?: RateLimitConfig;
-  auditLogs?: boolean | AuditConfig;
 
   session?: SessionConfig;
 
