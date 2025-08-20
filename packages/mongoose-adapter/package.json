@@ -1,6 +1,6 @@
 {
   "name": "@sifen/auth-mongoose",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Mongoose adapter for @sifen/auth.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
