@@ -1,2 +1,2 @@
 export { auth } from "./src/auth";
-export * from "./src/middlewares/auth.middleware";
+export { authGuard } from "./src/middlewares/auth.middleware";
