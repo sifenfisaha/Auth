@@ -1,17 +1,16 @@
 {
   "name": "@sifen/auth-mongoose",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Mongoose adapter for @sifen/auth.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
-    "dist/index.js",
-    "dist/index.d.ts",
+    "dist",
     "README.md"
   ],
   "license": "MIT",
   "dependencies": {
-    "@sifen/auth": "^0.1.0",
+    "@sifen/auth": "^0.1.5",
     "mongoose": "^8.16.4"
   },
   "peerDependencies": {

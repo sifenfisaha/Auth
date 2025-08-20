@@ -1,7 +1,7 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "rootDir": ".",
+    "rootDir": "src",
     "outDir": "dist",
     "declaration": true,
     "declarationMap": true,
@@ -11,6 +11,6 @@
     "target": "ES2022",
     "module": "CommonJS"
   },
-  "include": ["src", "index.ts"],
+  "include": ["src"],
   "exclude": ["dist", "node_modules"]
 }

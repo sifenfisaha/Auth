@@ -1,4 +1,7 @@
 {
   "files": [],
-  "references": [{ "path": "packages/auth" }, { "path": "packages/mongoose" }]
+  "references": [
+    { "path": "packages/auth" },
+    { "path": "packages/mongoose-adapter" }
+  ]
 }
