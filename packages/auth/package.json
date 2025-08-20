@@ -1,10 +1,13 @@
 {
   "name": "@sifen/auth",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Core auth library (routers, middleware, tokens, validation).",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "files": ["dist", "README.md"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "license": "MIT",
   "scripts": {
     "build": "tsc -p tsconfig.json",

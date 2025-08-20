@@ -1,3 +1,26 @@
+# Node modules
 /node_modules
+packages/*/node_modules
+examples/*/node_modules
+
+# Build outputs
 /dist
+packages/*/dist
+examples/*/dist
+
+# Env files
 .env
+packages/*/.env
+examples/*/.env
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor
+.DS_Store
+*.swp
+.vscode
+.idea
