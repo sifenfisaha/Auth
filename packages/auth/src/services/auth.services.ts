@@ -1,4 +1,3 @@
-import User from "../models/user.model";
 import { TokenService } from "./token.service";
 import { comparePassword, hashpassword } from "../utils/bcrypt";
 import {
@@ -193,7 +192,7 @@ export class AuthService {
     const { userAdapter } = getAuthConfig();
     if (!userAdapter) throw new Error("UserAdapter not configured");
 
-    const user = await User.findOne({ resetPasswordToken: otp }); // you may also implement via userAdapter
+    const user = await userAdapter.getUserById("8"); // you may also implement via userAdapter
     if (!user) throw new Error("Invalid OTP");
     if (user.resetPasswordExpires.getTime() < Date.now())
       throw new Error("OTP expired");
