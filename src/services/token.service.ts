@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import { v4 as uuid } from "uuid";
-import User from "../models/user.model";
+import { getAuthConfig } from "../configs/store";
 
 interface TokenPayload {
   userId: string;
@@ -9,24 +9,32 @@ interface TokenPayload {
 
 export class TokenService {
   static generateAccessToken(payload: TokenPayload) {
+    const config = getAuthConfig();
     const jti = uuid();
-    return jwt.sign({ ...payload, jti }, process.env.JWT_SECRET!, {
-      expiresIn: "15m",
+    return jwt.sign({ ...payload, jti }, config.jwt.secret, {
+      expiresIn: config.jwt.expiresIn,
+      algorithm: config.jwt.algorithm,
     });
   }
 
   static async generateRefreshToken(userId: string) {
+    const config = getAuthConfig();
+    if (!config.refreshToken) {
+      throw new Error("Refresh token config is missing");
+    }
+
     const jti = uuid();
-    const token = jwt.sign({ userId, jti }, process.env.REFRESH_SECRET!, {
-      expiresIn: "7d",
+    const token = jwt.sign({ userId, jti }, config.refreshToken.secret, {
+      expiresIn: config.refreshToken.expiresIn,
     });
 
-    const user = await User.findById(userId);
-
+    const user = await config.userAdapter.getUserById(userId);
     if (!user) throw new Error("User not found");
 
-    user.refreshTokens.push(jti);
-    await user.save();
+    const updatedTokens = [...(user.refreshTokens || []), jti];
+    await config.userAdapter.updateUser?.(userId, {
+      refreshTokens: updatedTokens,
+    });
 
     return token;
   }
@@ -37,7 +45,7 @@ export class TokenService {
   ): T | null {
     try {
       return jwt.verify(token, secret) as T;
-    } catch (error) {
+    } catch {
       return null;
     }
   }
@@ -45,39 +53,53 @@ export class TokenService {
   static async isRefreshTokenValid(
     jti: string,
     userId: string
-  ): Promise<Boolean> {
-    const user = await User.findById(userId);
+  ): Promise<boolean> {
+    const config = getAuthConfig();
+    const user = await config.userAdapter.getUserById(userId);
     if (!user) return false;
-    return user.refreshTokens.includes(jti);
+    return (user.refreshTokens || []).includes(jti);
   }
 
   static async invalidateRefreshToken(
     jti: string,
     userId: string
   ): Promise<void> {
-    const user = await User.findById(userId);
+    const config = getAuthConfig();
+    const user = await config.userAdapter.getUserById(userId);
     if (!user) throw new Error("User not found");
 
-    user.refreshTokens = user.refreshTokens.filter((t) => t !== jti);
-    await user.save();
+    const updatedTokens = (user.refreshTokens || []).filter(
+      (t: any) => t !== jti
+    );
+    await config.userAdapter.updateUser?.(userId, {
+      refreshTokens: updatedTokens,
+    });
   }
 
   static async rotateRefreshToken(
     oldJti: string,
     userId: string
   ): Promise<string> {
+    const config = getAuthConfig();
+    if (!config.refreshToken) {
+      throw new Error("Refresh token config is missing");
+    }
+
     const jti = uuid();
-    const user = await User.findById(userId);
+    const user = await config.userAdapter.getUserById(userId);
     if (!user) throw new Error("User not found");
 
-    user.refreshTokens = user.refreshTokens.filter((t) => t !== oldJti);
+    const updatedTokens = (user.refreshTokens || []).filter(
+      (t: any) => t !== oldJti
+    );
+    updatedTokens.push(jti);
 
-    user.refreshTokens.push(jti);
+    await config.userAdapter.updateUser?.(userId, {
+      refreshTokens: updatedTokens,
+    });
 
-    await user.save();
-
-    return jwt.sign({ userId, jti }, process.env.REFRESH_SECRET!, {
-      expiresIn: "7d",
+    return jwt.sign({ userId, jti }, config.refreshToken.secret, {
+      expiresIn: config.refreshToken.expiresIn,
     });
   }
 }

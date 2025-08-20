@@ -5,6 +5,7 @@ import {
   sendVerificationOtp,
   sendResetOtp,
 } from "../utils/sendVerificationEmail";
+import { getAuthConfig } from "../configs/store";
 
 interface RegisterInput {
   name: string;
@@ -28,35 +29,45 @@ interface ResetPasswordInput {
 
 export class AuthService {
   static async register({ name, email, password }: RegisterInput) {
-    const existingUser = await User.findOne({ email });
+    const { userAdapter, onRegister } = getAuthConfig();
+    if (!userAdapter) throw new Error("UserAdapter not configured");
+
+    const existingUser = await userAdapter.getUserByEmail(email);
     if (existingUser) throw new Error("User already exists");
 
     const hashedPassword = await hashpassword(password);
-    const user = new User({ name, email, password: hashedPassword });
-    await user.save();
+    const newUser = await userAdapter.createUser({
+      name,
+      email,
+      password: hashedPassword,
+    });
 
     const accessToken = TokenService.generateAccessToken({
-      userId: user._id.toString(),
+      userId: newUser._id.toString(),
     });
     const refreshToken = await TokenService.generateRefreshToken(
-      user._id.toString()
+      newUser._id.toString()
     );
 
     const safeUser = {
-      name: user.name,
-      email: user.email,
-      isAdmin: user.role === "admin",
+      name: newUser.name,
+      email: newUser.email,
+      isAdmin: newUser.role === "admin",
     };
+    onRegister?.(safeUser);
 
     return { user: safeUser, accessToken, refreshToken };
   }
 
   static async login({ email, password }: LoginInput) {
-    const user = await User.findOne({ email });
+    const { userAdapter, onLogin } = getAuthConfig();
+    if (!userAdapter) throw new Error("UserAdapter not configured");
+
+    const user = await userAdapter.getUserByEmail(email);
     if (!user) throw new Error("User not found");
 
-    const isValid = await comparePassword(password, user.password);
-    if (!isValid) throw new Error("Invalid credentials");
+    const valid = await comparePassword(password, user.password);
+    if (!valid) throw new Error("Invalid credentials");
 
     const accessToken = TokenService.generateAccessToken({
       userId: user._id.toString(),
@@ -70,16 +81,19 @@ export class AuthService {
       email: user.email,
       isAdmin: user.role === "admin",
     };
+    onLogin?.(safeUser);
 
     return { user: safeUser, accessToken, refreshToken };
   }
 
   static async refresh({ token }: RefreshInput) {
+    const { userAdapter } = getAuthConfig();
+    if (!userAdapter) throw new Error("UserAdapter not configured");
+
     const payload = TokenService.verifyToken<{ userId: string; jti: string }>(
       token,
-      process.env.REFRESH_SECRET!
+      getAuthConfig().refreshToken.secret
     );
-
     if (!payload?.userId || !payload.jti)
       throw new Error("Invalid or expired refresh token");
 
@@ -103,9 +117,8 @@ export class AuthService {
   static async logout(token: string) {
     const payload = TokenService.verifyToken<{ userId: string; jti: string }>(
       token,
-      process.env.REFRESH_SECRET!
+      getAuthConfig().refreshToken.secret
     );
-
     if (!payload?.userId || !payload.jti)
       throw new Error("Invalid or expired refresh token");
 
@@ -114,31 +127,35 @@ export class AuthService {
   }
 
   static async sendVerificationOtp(userId: string) {
-    const user = await User.findById(userId);
+    const { userAdapter } = getAuthConfig();
+    if (!userAdapter) throw new Error("UserAdapter not configured");
+
+    const user = await userAdapter.getUserById(userId);
     if (!user) throw new Error("User not found");
     if (user.isVerified) throw new Error("User already verified");
 
     const now = Date.now();
-
-    // Prevent requesting OTP too frequently
     if (
       user.verificationTokenExpires &&
       now < user.verificationTokenExpires.getTime()
-    ) {
+    )
       throw new Error("Wait before requesting another OTP");
-    }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    user.verificationToken = otp;
-    user.verificationTokenExpires = new Date(now + 24 * 60 * 60 * 1000);
-    await user.save();
+    await userAdapter.updateUser?.(userId, {
+      verificationToken: otp,
+      verificationTokenExpires: new Date(now + 24 * 60 * 60 * 1000),
+    });
 
     await sendVerificationOtp(user.email, user.name, otp);
     return true;
   }
 
   static async verifyEmail(userId: string, otp: string) {
-    const user = await User.findById(userId);
+    const { userAdapter } = getAuthConfig();
+    if (!userAdapter) throw new Error("UserAdapter not configured");
+
+    const user = await userAdapter.getUserById(userId);
     if (!user) throw new Error("User not found");
     if (user.isVerified) throw new Error("User already verified");
 
@@ -146,38 +163,48 @@ export class AuthService {
     if (user.verificationTokenExpires.getTime() < Date.now())
       throw new Error("OTP expired");
 
-    user.isVerified = true;
-    user.verificationToken = "";
-    user.verificationTokenExpires = new Date(0);
-    await user.save();
+    await userAdapter.updateUser?.(userId, {
+      isVerified: true,
+      verificationToken: "",
+      verificationTokenExpires: new Date(0),
+    });
 
     return true;
   }
 
   static async forgotPassword(email: string) {
-    const user = await User.findOne({ email });
+    const { userAdapter } = getAuthConfig();
+    if (!userAdapter) throw new Error("UserAdapter not configured");
+
+    const user = await userAdapter.getUserByEmail(email);
     if (!user) throw new Error("User not found");
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    user.resetPasswordToken = otp;
-    user.resetPasswordExpires = new Date(Date.now() + 10 * 60 * 1000);
-    await user.save();
+    await userAdapter.updateUser?.(user._id.toString(), {
+      resetPasswordToken: otp,
+      resetPasswordExpires: new Date(Date.now() + 10 * 60 * 1000),
+    });
 
     await sendResetOtp(user.email, user.name, otp);
     return true;
   }
 
   static async resetPassword({ otp, newPassword }: ResetPasswordInput) {
-    const user = await User.findOne({ resetPasswordToken: otp });
+    const { userAdapter } = getAuthConfig();
+    if (!userAdapter) throw new Error("UserAdapter not configured");
+
+    const user = await User.findOne({ resetPasswordToken: otp }); // you may also implement via userAdapter
     if (!user) throw new Error("Invalid OTP");
     if (user.resetPasswordExpires.getTime() < Date.now())
       throw new Error("OTP expired");
 
-    user.password = await hashpassword(newPassword);
-    user.resetPasswordToken = "";
-    user.resetPasswordExpires = new Date(0);
-    user.refreshTokens = [];
-    await user.save();
+    const hashedPassword = await hashpassword(newPassword);
+    await userAdapter.updateUser?.(user._id.toString(), {
+      password: hashedPassword,
+      resetPasswordToken: "",
+      resetPasswordExpires: new Date(0),
+      refreshTokens: [],
+    });
 
     return true;
   }
@@ -185,7 +212,7 @@ export class AuthService {
   static getUserFromToken(token: string) {
     const payload = TokenService.verifyToken<{ userId: string; jti: string }>(
       token,
-      process.env.REFRESH_SECRET!
+      getAuthConfig().refreshToken.secret
     );
     if (!payload || !payload.userId)
       throw new Error("Invalid or expired token");

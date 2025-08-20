@@ -27,13 +27,13 @@ export interface RateLimitConfig {
 
 export interface JwtConfig {
   secret: string;
-  expiresIn?: string;
+  expiresIn: "15m" | "30m" | "1h" | "2h" | "7d";
   algorithm?: "HS256" | "HS384" | "HS512";
 }
 
 export interface RefreshTokenConfig {
   secret: string;
-  expiresIn?: string;
+  expiresIn: "7d" | "14d" | "30d" | "60d";
   rotation?: "strict" | "lax";
   reuseDetection?: boolean;
 }
@@ -49,7 +49,7 @@ export interface AuthConfig<UserType = any> {
   basePath?: string;
 
   jwt: JwtConfig;
-  refreshToken?: RefreshTokenConfig;
+  refreshToken: RefreshTokenConfig;
 
   userAdapter: UserAdapter<UserType>;
 

@@ -1,8 +1,12 @@
 import { Request, Response } from "express";
 import { AuthService } from "../services/auth.services";
+import { getAuthConfig } from "../configs/store";
 
 export const register = async (req: Request, res: Response) => {
+  const config = getAuthConfig();
   const { name, email, password } = req.data!;
+  console.log(name, email, password);
+
   try {
     const { user, accessToken, refreshToken } = await AuthService.register({
       name,
@@ -10,12 +14,18 @@ export const register = async (req: Request, res: Response) => {
       password,
     });
 
-    res.cookie("refreshToken", refreshToken, {
+    res.cookie(config.session?.cookieName || "refreshToken", refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      secure:
+        config.session?.cookieSecure ?? process.env.NODE_ENV === "production",
+      sameSite: config.session?.cookieSameSite ?? "strict",
+      maxAge:
+        config.refreshToken.expiresIn === "7d"
+          ? 7 * 24 * 60 * 60 * 1000
+          : undefined,
     });
+
+    config.onRegister?.(user, req);
 
     return res.status(201).json({
       success: true,
@@ -29,19 +39,27 @@ export const register = async (req: Request, res: Response) => {
 };
 
 export const login = async (req: Request, res: Response) => {
+  const config = getAuthConfig();
   const { email, password } = req.data!;
+
   try {
     const { user, accessToken, refreshToken } = await AuthService.login({
       email,
       password,
     });
 
-    res.cookie("refreshToken", refreshToken, {
+    res.cookie(config.session?.cookieName || "refreshToken", refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      secure:
+        config.session?.cookieSecure ?? process.env.NODE_ENV === "production",
+      sameSite: config.session?.cookieSameSite ?? "strict",
+      maxAge:
+        config.refreshToken.expiresIn === "7d"
+          ? 7 * 24 * 60 * 60 * 1000
+          : undefined,
     });
+
+    config.onLogin?.(user, req);
 
     return res.json({
       success: true,
@@ -55,7 +73,9 @@ export const login = async (req: Request, res: Response) => {
 };
 
 export const refreshToken = async (req: Request, res: Response) => {
-  const token = req.cookies.refreshToken;
+  const config = getAuthConfig();
+  const token = req.cookies[config.session?.cookieName || "refreshToken"];
+
   if (!token)
     return res
       .status(401)
@@ -63,15 +83,17 @@ export const refreshToken = async (req: Request, res: Response) => {
 
   try {
     const { accessToken, refreshToken: newRefreshToken } =
-      await AuthService.refresh({
-        token,
-      });
+      await AuthService.refresh({ token });
 
-    res.cookie("refreshToken", newRefreshToken, {
+    res.cookie(config.session?.cookieName || "refreshToken", newRefreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      secure:
+        config.session?.cookieSecure ?? process.env.NODE_ENV === "production",
+      sameSite: config.session?.cookieSameSite ?? "strict",
+      maxAge:
+        config.refreshToken.expiresIn === "7d"
+          ? 7 * 24 * 60 * 60 * 1000
+          : undefined,
     });
 
     return res.json({
@@ -85,20 +107,25 @@ export const refreshToken = async (req: Request, res: Response) => {
 };
 
 export const logout = async (req: Request, res: Response) => {
-  const token = req.cookies.refreshToken;
+  const config = getAuthConfig();
+  const token = req.cookies[config.session?.cookieName || "refreshToken"];
+
   if (!token)
     return res
       .status(401)
       .json({ success: false, message: "No token provided" });
 
   try {
-    await AuthService.logout(token);
+    const user = await AuthService.logout(token);
 
-    res.clearCookie("refreshToken", {
+    res.clearCookie(config.session?.cookieName || "refreshToken", {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      secure:
+        config.session?.cookieSecure ?? process.env.NODE_ENV === "production",
+      sameSite: config.session?.cookieSameSite ?? "strict",
     });
+
+    config.onLogout?.(user, req);
 
     return res.json({ success: true, message: "Logged out successfully" });
   } catch (err: any) {
@@ -107,14 +134,15 @@ export const logout = async (req: Request, res: Response) => {
 };
 
 export const sendVerifyOtp = async (req: Request, res: Response) => {
-  const token = req.cookies.refreshToken;
+  const token =
+    req.cookies[getAuthConfig().session?.cookieName || "refreshToken"];
   if (!token)
     return res
       .status(401)
       .json({ success: false, message: "No token provided" });
 
   try {
-    const payload: any = AuthService.getUserFromToken(token);
+    const payload = AuthService.getUserFromToken(token);
     await AuthService.sendVerificationOtp(payload.userId);
 
     return res.json({ success: true, message: "Verification OTP sent" });
@@ -125,14 +153,15 @@ export const sendVerifyOtp = async (req: Request, res: Response) => {
 
 export const verifyEmail = async (req: Request, res: Response) => {
   const { otp } = req.data!;
-  const token = req.cookies.refreshToken;
+  const token =
+    req.cookies[getAuthConfig().session?.cookieName || "refreshToken"];
   if (!token)
     return res
       .status(401)
       .json({ success: false, message: "No token provided" });
 
   try {
-    const payload: any = AuthService.getUserFromToken(token);
+    const payload = AuthService.getUserFromToken(token);
     await AuthService.verifyEmail(payload.userId, otp);
 
     return res.json({ success: true, message: "Email verified successfully" });
@@ -142,21 +171,9 @@ export const verifyEmail = async (req: Request, res: Response) => {
 };
 
 export const forgotPassword = async (req: Request, res: Response) => {
-  const { email } = req.data!;
-  try {
-    await AuthService.forgotPassword(email);
-    return res.json({ success: true, message: "OTP sent to reset password" });
-  } catch (err: any) {
-    return res.status(400).json({ success: false, message: err.message });
-  }
+  //  todo: figure out the logic for this
 };
 
 export const resetPassword = async (req: Request, res: Response) => {
-  const { otp, newPassword } = req.data!;
-  try {
-    await AuthService.resetPassword({ otp, newPassword });
-    return res.json({ success: true, message: "Password reset successfully" });
-  } catch (err: any) {
-    return res.status(400).json({ success: false, message: err.message });
-  }
+  //  todo: figure out the logic for this
 };
