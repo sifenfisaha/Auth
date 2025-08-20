@@ -1,17 +1,17 @@
 {
   "name": "@sifen/auth",
-  "version": "0.1.5",
+  "version": "0.1.7",
   "description": "Core auth library (routers, middleware, tokens, validation).",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
-    "dist/index.js",
-    "dist/index.d.ts",
+    "dist",
     "README.md"
   ],
   "license": "MIT",
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist",
     "test": "node -e \"console.log('[auth] tests go here')\"",
     "lint": "echo \"(add eslint later)\"",
     "format": "echo \"(add prettier later)\""
