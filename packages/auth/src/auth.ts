@@ -86,4 +86,3 @@ export const auth = <UserType = any>(
 };
 
 export * from "./middlewares/auth.middleware";
-export * from "./utils/jwt";

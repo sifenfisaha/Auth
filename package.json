@@ -1,51 +1,16 @@
 {
-  "name": "@sifen/jwt-auth-api",
-  "version": "1.0.7",
-  "description": "A robust, reusable JWT authentication API boilerplate with user roles, token rotation, and validation.",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "files": [
-    "dist",
-    "README.md"
+  "name": "sifen-auth-monorepo",
+  "private": true,
+  "workspaces": [
+    "packages/*"
   ],
   "scripts": {
-    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
-    "build": "tsc",
-    "start": "node dist/index.js"
-  },
-  "keywords": [
-    "jwt",
-    "auth",
-    "typescript",
-    "express",
-    "mongoose",
-    "authentication",
-    "authorization",
-    "boilerplate"
-  ],
-  "author": "Sifen Fisaha",
-  "license": "MIT",
-  "dependencies": {
-    "bcryptjs": "^3.0.2",
-    "cookie-parser": "^1.4.7",
-    "cors": "^2.8.5",
-    "dotenv": "^17.2.0",
-    "express": "^5.1.0",
-    "express-validator": "^7.2.1",
-    "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.16.4",
-    "nodemailer": "^7.0.5",
-    "uuid": "^11.1.0"
+    "build": "npm run build -ws",
+    "test": "npm run test -ws",
+    "lint": "npm run lint -ws",
+    "format": "npm run format -ws"
   },
   "devDependencies": {
-    "@types/bcryptjs": "^2.4.6",
-    "@types/cookie-parser": "^1.4.9",
-    "@types/express": "^5.0.3",
-    "@types/jsonwebtoken": "^9.0.10",
-    "@types/mongoose": "^5.11.96",
-    "@types/node": "^24.1.0",
-    "@types/nodemailer": "^6.4.17",
-    "ts-node-dev": "^2.0.0",
     "typescript": "^5.8.3"
   }
 }
