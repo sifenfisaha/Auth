@@ -45,6 +45,8 @@ const userSchema = new Schema<Iuser>(
   { timestamps: true }
 );
 
-const User = mongoose.model<Iuser>("User", userSchema);
-
-export default User;
+export function getUserModel(mongooseInstance: typeof mongoose) {
+  return (
+    mongooseInstance.models.User || mongooseInstance.model("User", userSchema)
+  );
+}
