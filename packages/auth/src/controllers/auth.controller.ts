@@ -133,38 +133,20 @@ export const logout = async (req: Request, res: Response) => {
   }
 };
 
-export const sendVerifyOtp = async (req: Request, res: Response) => {
-  const token =
-    req.cookies[getAuthConfig().session?.cookieName || "refreshToken"];
-  if (!token)
-    return res
-      .status(401)
-      .json({ success: false, message: "No token provided" });
-
+export const requestVerification = async (req: Request, res: Response) => {
+  const { email } = req.data!;
   try {
-    const payload = AuthService.getUserFromToken(token);
-    await AuthService.sendVerificationOtp(payload.userId);
-
-    return res.json({ success: true, message: "Verification OTP sent" });
+    const { message } = await AuthService.requestVerification(email);
+    return res.json({ success: true, message });
   } catch (err: any) {
     return res.status(400).json({ success: false, message: err.message });
   }
 };
-
-export const verifyEmail = async (req: Request, res: Response) => {
+export const confirmVerification = async (req: Request, res: Response) => {
   const { otp } = req.data!;
-  const token =
-    req.cookies[getAuthConfig().session?.cookieName || "refreshToken"];
-  if (!token)
-    return res
-      .status(401)
-      .json({ success: false, message: "No token provided" });
-
   try {
-    const payload = AuthService.getUserFromToken(token);
-    await AuthService.verifyEmail(payload.userId, otp);
-
-    return res.json({ success: true, message: "Email verified successfully" });
+    const { message } = await AuthService.confirmVerification(otp);
+    res.json({ success: true, message });
   } catch (err: any) {
     return res.status(400).json({ success: false, message: err.message });
   }

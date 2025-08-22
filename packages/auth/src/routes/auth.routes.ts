@@ -4,10 +4,10 @@ import {
   login,
   refreshToken,
   logout,
-  sendVerifyOtp,
-  verifyEmail,
   forgotPassword,
   resetPassword,
+  requestVerification,
+  confirmVerification,
 } from "../controllers/auth.controller";
 import {
   registerSchema,
@@ -23,8 +23,18 @@ router.post("/singup", registerSchema, validateRequest, register);
 router.post("/login", loginSchema, validateRequest, login);
 router.post("/refresh", refreshToken);
 router.post("/logout", logout);
-router.get("/verify-email", sendVerifyOtp);
-router.post("/verify-email", otpSchema, validateRequest, verifyEmail);
+router.post(
+  "/verify-email/request",
+  verifyEmailSchema,
+  validateRequest,
+  requestVerification
+);
+router.post(
+  "/verify-email/confirm",
+  otpSchema,
+  validateRequest,
+  confirmVerification
+);
 router.post(
   "/forgot-password",
   verifyEmailSchema,
