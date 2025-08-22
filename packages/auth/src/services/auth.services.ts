@@ -156,4 +156,44 @@ export class AuthService {
 
     return { message: "Email verified successfully" };
   }
+
+  static async requestePasswordReset(email: string) {
+    const { userAdapter } = getAuthConfig();
+    const user = await userAdapter.getUserByEmail(email);
+
+    if (!user) throw new Error("User not found");
+
+    const otp = generateOtp(6);
+
+    await userAdapter.updateUser(user._id, {
+      resetPasswordToken: otp,
+      resetPasswordExpires: new Date(Date.now() + 1000 * 60 * 10),
+    });
+
+    const template = EmailService.renderPasswordResetTemplate(user, otp);
+
+    await EmailService.send({ to: user.email, ...template });
+
+    return { message: "Reset otp sent to email" };
+  }
+
+  static async resetPassword(otp: string, newPassword: string) {
+    const { userAdapter } = getAuthConfig();
+
+    const user = await userAdapter.getUserByResetPasswordOtp(otp);
+
+    if (!user) {
+      throw new Error("Invalid or expired token");
+    }
+
+    const newHashedPassword = await hashpassword(newPassword);
+
+    await userAdapter.updateUser(user._id, {
+      password: newHashedPassword,
+      resetPasswordToken: "",
+      resetPasswordExpires: new Date(0),
+    });
+
+    return { message: "Password reset successfully" };
+  }
 }

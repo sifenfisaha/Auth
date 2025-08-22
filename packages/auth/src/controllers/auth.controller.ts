@@ -5,7 +5,6 @@ import { getAuthConfig } from "../configs/store";
 export const register = async (req: Request, res: Response) => {
   const config = getAuthConfig();
   const { name, email, password } = req.data!;
-  console.log(name, email, password);
 
   try {
     const { user, accessToken, refreshToken } = await AuthService.register({
@@ -153,9 +152,24 @@ export const confirmVerification = async (req: Request, res: Response) => {
 };
 
 export const forgotPassword = async (req: Request, res: Response) => {
-  //  todo: figure out the logic for this
+  const { email } = req.data!;
+
+  try {
+    const { message } = await AuthService.requestePasswordReset(email);
+    res.json({ success: true, message });
+  } catch (err: any) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
 };
 
 export const resetPassword = async (req: Request, res: Response) => {
-  //  todo: figure out the logic for this
+  const { otp, newPassword } = req.data!;
+  console.log(otp, newPassword);
+
+  try {
+    const { message } = await AuthService.resetPassword(otp, newPassword);
+    res.json({ success: true, message });
+  } catch (err: any) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
 };
