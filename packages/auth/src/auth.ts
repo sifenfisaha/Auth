@@ -44,6 +44,10 @@ export const auth = <UserType = any>(
       getUserById: async () => null,
       getUserByEmail: async () => null,
       createUser: async () => null as any,
+      updateUser: async () => null,
+      getUserByResetPasswordOtp: async () => null,
+      getUserByVerificationOtp: async () => null,
+      deleteUser: async () => null,
     },
     passwordPolicy: {
       minLength: 8,
