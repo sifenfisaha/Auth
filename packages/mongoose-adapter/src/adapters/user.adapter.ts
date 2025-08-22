@@ -33,21 +33,19 @@ export const mongooseUserAdapter = (
       return res !== null;
     },
     async getUserByVerificationOtp(otp: string): Promise<Iuser | null> {
-      return getUserModel(mongoose)
-        .findOne({
-          verificationToken: otp,
-          verificationTokenExpires: { $gt: new Date() },
-        })
+      return User.findOne({
+        verificationToken: otp,
+        verificationTokenExpires: { $gt: new Date() },
+      })
         .lean<Iuser>()
         .exec();
     },
 
     async getUserByResetPasswordOtp(otp: string): Promise<Iuser | null> {
-      return getUserModel(mongoose)
-        .findOne({
-          resetPasswordToken: otp,
-          resetPasswordExpires: { $gt: new Date() },
-        })
+      return User.findOne({
+        resetPasswordToken: otp,
+        resetPasswordExpires: { $gt: new Date() },
+      })
         .lean<Iuser>()
         .exec();
     },
