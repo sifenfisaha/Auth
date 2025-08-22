@@ -32,5 +32,22 @@ export const mongooseUserAdapter = (
       const res = await User.findByIdAndDelete(id).exec();
       return res !== null;
     },
+    async getUserByVerificationOtp(otp: string): Promise<Iuser | null> {
+      return User.findOne({
+        verificationToken: otp,
+        verificationTokenExpires: { $gt: new Date() },
+      })
+        .lean<Iuser>()
+        .exec();
+    },
+
+    async getUserByResetPasswordOtp(otp: string): Promise<Iuser | null> {
+      return User.findOne({
+        resetPasswordToken: otp,
+        resetPasswordExpires: { $gt: new Date() },
+      })
+        .lean<Iuser>()
+        .exec();
+    },
   };
 };

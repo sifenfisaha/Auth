@@ -18,9 +18,11 @@ export interface UserAdapter<UserType = any> {
   getUserById: (id: string) => Promise<UserType | null>;
   getUserByEmail: (email: string) => Promise<UserType | null>;
   createUser: (data: Record<string, any>) => Promise<UserType>;
-  updateUser?: (
+  updateUser: (
     id: string,
     data: Record<string, any>
   ) => Promise<UserType | null>;
-  deleteUser?: (id: string) => Promise<boolean>;
+  deleteUser: (id: string) => Promise<boolean | null>;
+  getUserByVerificationOtp: (otp: string) => Promise<UserType | null>;
+  getUserByResetPasswordOtp: (otp: string) => Promise<UserType | null>;
 }

@@ -5,7 +5,6 @@ import { getAuthConfig } from "../configs/store";
 export const register = async (req: Request, res: Response) => {
   const config = getAuthConfig();
   const { name, email, password } = req.data!;
-  console.log(name, email, password);
 
   try {
     const { user, accessToken, refreshToken } = await AuthService.register({
@@ -133,47 +132,44 @@ export const logout = async (req: Request, res: Response) => {
   }
 };
 
-export const sendVerifyOtp = async (req: Request, res: Response) => {
-  const token =
-    req.cookies[getAuthConfig().session?.cookieName || "refreshToken"];
-  if (!token)
-    return res
-      .status(401)
-      .json({ success: false, message: "No token provided" });
-
+export const requestVerification = async (req: Request, res: Response) => {
+  const { email } = req.data!;
   try {
-    const payload = AuthService.getUserFromToken(token);
-    await AuthService.sendVerificationOtp(payload.userId);
-
-    return res.json({ success: true, message: "Verification OTP sent" });
+    const { message } = await AuthService.requestVerification(email);
+    return res.json({ success: true, message });
   } catch (err: any) {
     return res.status(400).json({ success: false, message: err.message });
   }
 };
-
-export const verifyEmail = async (req: Request, res: Response) => {
+export const confirmVerification = async (req: Request, res: Response) => {
   const { otp } = req.data!;
-  const token =
-    req.cookies[getAuthConfig().session?.cookieName || "refreshToken"];
-  if (!token)
-    return res
-      .status(401)
-      .json({ success: false, message: "No token provided" });
-
   try {
-    const payload = AuthService.getUserFromToken(token);
-    await AuthService.verifyEmail(payload.userId, otp);
-
-    return res.json({ success: true, message: "Email verified successfully" });
+    const { message } = await AuthService.confirmVerification(otp);
+    res.json({ success: true, message });
   } catch (err: any) {
     return res.status(400).json({ success: false, message: err.message });
   }
 };
 
 export const forgotPassword = async (req: Request, res: Response) => {
-  //  todo: figure out the logic for this
+  const { email } = req.data!;
+
+  try {
+    const { message } = await AuthService.requestePasswordReset(email);
+    res.json({ success: true, message });
+  } catch (err: any) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
 };
 
 export const resetPassword = async (req: Request, res: Response) => {
-  //  todo: figure out the logic for this
+  const { otp, newPassword } = req.data!;
+  console.log(otp, newPassword);
+
+  try {
+    const { message } = await AuthService.resetPassword(otp, newPassword);
+    res.json({ success: true, message });
+  } catch (err: any) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
 };

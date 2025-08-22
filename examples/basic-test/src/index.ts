@@ -10,7 +10,12 @@ const app = express();
 const userAdapter = mongooseUserAdapter(mongoose);
 
 app.use(express.json());
-app.use(auth({ userAdapter: userAdapter }));
+app.use(
+  auth({
+    userAdapter: userAdapter,
+    email: { from: "test", transport: "console" },
+  })
+);
 
 connectDb(() => {
   app.listen(8000, () => console.log("surver running on port 8000"));
