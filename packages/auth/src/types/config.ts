@@ -45,6 +45,39 @@ export interface SessionConfig {
   cookieSameSite?: "strict" | "lax" | "none";
 }
 
+export interface SmtpOptions {
+  host: string;
+  port: number;
+  secure: boolean;
+  auth: {
+    user: string;
+    pass: string;
+  };
+}
+
+export type EmailTransport = "smpt" | "console";
+
+export interface EmailTemplates {
+  verification?: (ctx: { user: any; otp: string; req: any }) => {
+    subject: string;
+    html: string;
+    text: string;
+  };
+  passwordReset?: (ctx: { user: any; otp: string; req?: any }) => {
+    subject: string;
+    html: string;
+    text?: string;
+  };
+}
+
+export interface EmailConfig {
+  enabled?: boolean;
+  transport: EmailTransport;
+  from: string;
+  stmp?: SmtpOptions;
+  templates?: EmailTemplates;
+}
+
 export interface AuthConfig<UserType = any> {
   basePath?: string;
 
@@ -59,6 +92,7 @@ export interface AuthConfig<UserType = any> {
   rateLimit?: RateLimitConfig;
 
   session?: SessionConfig;
+  email?: EmailConfig;
 
   debug?: boolean;
 
