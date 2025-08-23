@@ -164,7 +164,6 @@ export const forgotPassword = async (req: Request, res: Response) => {
 
 export const resetPassword = async (req: Request, res: Response) => {
   const { otp, newPassword } = req.data!;
-  console.log(otp, newPassword);
 
   try {
     const { message } = await AuthService.resetPassword(otp, newPassword);

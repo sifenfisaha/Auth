@@ -1,9 +1,5 @@
 import { TokenService } from "./token.service";
 import { comparePassword, hashpassword } from "../utils/bcrypt";
-import {
-  sendVerificationOtp,
-  sendResetOtp,
-} from "../utils/sendVerificationEmail";
 import { getAuthConfig } from "../configs/store";
 import { generateOtp } from "../utils/otp";
 import { EmailService } from "./email.service";
