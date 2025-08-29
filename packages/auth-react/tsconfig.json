@@ -11,7 +11,8 @@
     "declarationMap": true,
     "moduleResolution": "bundler",
     "isolatedModules": true,
-    "types": ["react", "react-dom"]
+    "types": ["react", "react-dom"],
+    "lib": ["ES2020", "DOM"]
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist"]
