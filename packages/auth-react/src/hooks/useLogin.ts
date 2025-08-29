@@ -1,2 +1,2 @@
 import { useAuthContext } from "../context/AuthProvider";
-export const useAuth = () => useAuthContext();
+export const useLogin = () => useAuthContext().login;
