@@ -62,8 +62,6 @@ import connectDb from "./config/mongoose.config";
 const app = express();
 const userAdapter = mongooseUserAdapter(mongoose);
 
-app.use(express.json());
-
 app.use(
   auth({
     userAdapter,
@@ -78,7 +76,7 @@ app.use(
     email: {
       enabled: true,
       from: "no-reply@example.com",
-      transport: "console", // supports 'smtp' or 'console'
+      transport: "smtp", // supports 'smtp' or 'console'
       smtp: {
         host: process.env.SMTP_HOST!,
         port: Number(process.env.SMTP_PORT!),
