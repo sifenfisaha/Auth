@@ -1,6 +1,6 @@
 {
   "name": "@sifen/auth",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Core auth library (routers, middleware, tokens, validation).",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
