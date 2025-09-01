@@ -1,10 +1,12 @@
 import fs from "fs";
 import path from "path";
 
-const dbPath = path.join(__dirname, "../../db/users.json");
+const dbPath = path.join(process.cwd(), "users.json"); // root of user's project
 
+// Ensure file exists
 if (!fs.existsSync(dbPath)) {
   fs.writeFileSync(dbPath, JSON.stringify([]));
+  console.log("[auth] Created users.json in project root (devMode)");
 }
 
 const readUser = () => {
