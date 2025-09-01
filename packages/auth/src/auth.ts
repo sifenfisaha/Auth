@@ -7,13 +7,26 @@ import {
   RateLimitConfig,
 } from "./types/config";
 import { setAuthConfig } from "./configs/store";
-import crypto from "crypto";
+import { jsonUserAdapter } from "./db/json.adapter";
+import express from "express";
+import cookieParser from "cookie-parser";
 
 export const auth = <UserType = any>(
-  config?: Partial<AuthConfig<UserType>>
+  config?: Partial<AuthConfig<UserType>> & { devMode?: boolean }
 ) => {
-  const defaultJwtSecret = crypto.randomBytes(32).toString("hex");
-  const defaultRefreshSecret = crypto.randomBytes(32).toString("hex");
+  if (config?.devMode) {
+    console.warn("[auth] Running in devMode. Using local JSON DB.");
+    config.userAdapter = jsonUserAdapter as any;
+    config.jwt = { secret: "dev-secret", expiresIn: "1h" };
+    config.refreshToken = { secret: "dev-refresh", expiresIn: "7d" };
+    config.email = {
+      enabled: false,
+      from: "dev@example.com",
+      transport: "console",
+    };
+  }
+  const defaultJwtSecret = "dev-secret";
+  const defaultRefreshSecret = "dev-refresh";
 
   // Typed defaults
   const defaultJwt: JwtConfig = {
@@ -84,6 +97,8 @@ export const auth = <UserType = any>(
   setAuthConfig(mergedConfig);
 
   const router = Router();
+  router.use(express.json());
+  router.use(cookieParser());
   router.use(mergedConfig.basePath!, AuthRoutes);
 
   return router;

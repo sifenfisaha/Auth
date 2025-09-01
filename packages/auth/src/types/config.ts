@@ -84,7 +84,8 @@ export interface EmailConfig {
 
 export interface AuthConfig<UserType = any> {
   basePath?: string;
-
+  devMode?: boolean;
+  name?: string;
   jwt: JwtConfig;
   refreshToken: RefreshTokenConfig;
 
