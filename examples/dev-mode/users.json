@@ -1,0 +1,116 @@
+[
+  {
+    "id": "1756735245208",
+    "name": "alpha",
+    "email": "user@example.com",
+    "password": "$2b$10$W/nU1G9Y4BQdsiPJSv41Z.R4Ue.6UvZtuwy.A97jDusg569nUNzuu",
+    "role": "user",
+    "isVerified": false,
+    "refreshTokens": [],
+    "verificationToken": "",
+    "verificationTokenExpires": "2025-09-01T15:00:45.208Z",
+    "resetPasswordToken": "",
+    "resetPasswordExpires": "2025-09-01T15:00:45.208Z"
+  },
+  {
+    "id": "1756735478765",
+    "name": "alpha",
+    "email": "uswer@example.com",
+    "password": "$2b$10$7/hFRAxQhBKfab.L4AopSuHdjERz3L95LCZSr4kwR7LBVSD8YwCFi",
+    "role": "user",
+    "isVerified": false,
+    "refreshTokens": [],
+    "verificationToken": "",
+    "verificationTokenExpires": "2025-09-01T15:04:38.765Z",
+    "resetPasswordToken": "",
+    "resetPasswordExpires": "2025-09-01T15:04:38.765Z"
+  },
+  {
+    "id": "1756735628423",
+    "name": "alpha",
+    "email": "uswser@example.com",
+    "password": "$2b$10$hgJkaBR4mYrjnlZm5adbPONUw.SwKBkX9UblaBSLZHwBLTrUxITr.",
+    "role": "user",
+    "isVerified": false,
+    "refreshTokens": [],
+    "verificationToken": "",
+    "verificationTokenExpires": "2025-09-01T15:07:08.423Z",
+    "resetPasswordToken": "",
+    "resetPasswordExpires": "2025-09-01T15:07:08.423Z"
+  },
+  {
+    "id": "1756735647033",
+    "name": "alpha",
+    "email": "uswsesr@example.com",
+    "password": "$2b$10$Y9nqNT6mDXovZ7D8S03JOuKbfzKH7JfKTnTvdJtbUJIZWr91A2l/a",
+    "role": "user",
+    "isVerified": false,
+    "refreshTokens": [],
+    "verificationToken": "",
+    "verificationTokenExpires": "2025-09-01T15:07:27.033Z",
+    "resetPasswordToken": "",
+    "resetPasswordExpires": "2025-09-01T15:07:27.033Z"
+  },
+  {
+    "id": "1756735891426",
+    "name": "alphea",
+    "email": "usws33esr@example.com",
+    "password": "$2b$10$mBUm2jO0H5lZjrAXu3B/WOVJs3tgxduuGrg2Y.w8cju1Nl0szFFxO",
+    "role": "user",
+    "isVerified": false,
+    "refreshTokens": [],
+    "verificationToken": "",
+    "verificationTokenExpires": "2025-09-01T15:11:31.426Z",
+    "resetPasswordToken": "",
+    "resetPasswordExpires": "2025-09-01T15:11:31.426Z"
+  },
+  {
+    "id": "1756736019879",
+    "name": "alphea",
+    "email": "usws33wesr@example.com",
+    "password": "$2b$10$0eDP.0SH46Few2HXYYuoHukat0pDVrxq98oKekXqXvF2uWUG84mLO",
+    "role": "user",
+    "isVerified": false,
+    "refreshTokens": [],
+    "verificationToken": "",
+    "verificationTokenExpires": "2025-09-01T15:13:39.879Z",
+    "resetPasswordToken": "",
+    "resetPasswordExpires": "2025-09-01T15:13:39.879Z"
+  },
+  {
+    "_id": "1756736407381",
+    "name": "alphea",
+    "email": "usws33we3sr@example.com",
+    "password": "$2b$10$Rh77SOhGp5h7r4f7ITESu.4RcHlb0XhP.kgkMBDEuasICoqN1.X.O",
+    "role": "user",
+    "isVerified": false,
+    "refreshTokens": [
+      "c120bf6c-9347-4b93-95e3-8002d7509abd",
+      "993c0b97-a31f-4194-9708-6cd202d41cb1"
+    ],
+    "verificationToken": "",
+    "verificationTokenExpires": "2025-09-01T15:20:07.381Z",
+    "resetPasswordToken": "",
+    "resetPasswordExpires": "2025-09-01T15:20:07.381Z"
+  },
+  {
+    "_id": "1756736631870",
+    "name": "alphea",
+    "email": "usws33wssse3sr@example.com",
+    "password": "$2b$10$k8zLOX2OwvLZC19afBt.SuvYLjNkh3od6Z3jPJSH1K/P9PfkKfNMS",
+    "role": "user",
+    "isVerified": false,
+    "refreshTokens": [
+      "f48a7fc7-460c-4d0a-8022-c2cda8e722d4",
+      "41223a8c-5358-4d86-a22e-a8fba1cce034",
+      "ab08944c-ad92-4665-9063-3d4fd66c1a10",
+      "d6f5c789-404c-4c72-ba9b-711da14833fd",
+      "43394adb-c055-48e6-8601-9ec594346969",
+      "a7618232-ee51-440f-b193-5dcc0377e676"
+    ],
+    "verificationToken": "663936",
+    "verificationTokenExpires": "2025-09-02T14:41:28.293Z",
+    "resetPasswordToken": "",
+    "resetPasswordExpires": "2025-09-01T15:23:51.870Z"
+  }
+]
