@@ -8,6 +8,8 @@ import {
 } from "./types/config";
 import { setAuthConfig } from "./configs/store";
 import { jsonUserAdapter } from "./db/json.adapter";
+import express from "express";
+import cookieParser from "cookie-parser";
 
 export const auth = <UserType = any>(
   config?: Partial<AuthConfig<UserType>> & { devMode?: boolean }
@@ -95,6 +97,8 @@ export const auth = <UserType = any>(
   setAuthConfig(mergedConfig);
 
   const router = Router();
+  router.use(express.json());
+  router.use(cookieParser());
   router.use(mergedConfig.basePath!, AuthRoutes);
 
   return router;
