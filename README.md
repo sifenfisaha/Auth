@@ -47,6 +47,54 @@ app.listen(5000, () => {
 - Automatically creates the file on first run
 - Useful for quick development/testing without a database
 
+## Authorization Middleware (`authGuard`)
+
+Use `authGuard` to protect routes and enforce role-based access control. It works with the configuration provided to `auth()` and the currently logged-in user.
+
+### Usage
+
+```ts
+import express from "express";
+import { auth, authGuard } from "@sifen/auth";
+
+const app = express();
+
+// Initialize authentication
+app.use(auth({ devMode: true }));
+
+// Protect a route for authenticated users
+app.get("/profile", authGuard(), (req, res) => {
+  res.json({ success: true, user: req.user });
+});
+
+// Protect a route for admins only
+app.get("/admin", authGuard({ roles: ["admin"] }), (req, res) => {
+  res.json({ success: true, message: "Welcome admin!" });
+});
+
+// Optional authentication
+app.get("/optional", authGuard({ optional: true }), (req, res) => {
+  if (req.user) {
+    res.json({ loggedIn: true, user: req.user });
+  } else {
+    res.json({ loggedIn: false });
+  }
+});
+```
+
+### Options
+
+| Option     | Type       | Description                                                                                                                  |
+| ---------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `optional` | `boolean`  | If `true`, allows unauthenticated access while still populating `req.user` when a valid token is provided. Default: `false`. |
+| `roles`    | `string[]` | An array of roles allowed to access the route. If the user's role is not in this array, access is forbidden.                 |
+
+### Behavior
+
+- Returns **401 Unauthorized** if no token or an invalid token is provided.
+- Returns **403 Forbidden** if the user's role is not allowed.
+- Populates `req.user` with user data if the token is valid.
+
 ### Production with a database (MongoDB example)
 
 ```ts
