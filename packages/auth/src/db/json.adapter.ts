@@ -1,5 +1,7 @@
 import fs from "fs";
 import path from "path";
+import { getAuthConfig } from "../configs/store";
+
 export interface DevUser {
   _id: string;
   name: string;
@@ -16,11 +18,17 @@ export interface DevUser {
 
 const dbPath = path.join(process.cwd(), "users.json");
 
-if (!fs.existsSync(dbPath)) {
-  fs.writeFileSync(dbPath, JSON.stringify([]));
-}
+const ensureDbExists = () => {
+  const config = getAuthConfig();
+  if (config.devMode) {
+    if (!fs.existsSync(dbPath)) {
+      fs.writeFileSync(dbPath, JSON.stringify([]));
+    }
+  }
+};
 
 const readUsers = (): DevUser[] => {
+  ensureDbExists();
   const data = fs.readFileSync(dbPath, "utf-8");
   return JSON.parse(data);
 };
